@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rolador de Dado D4</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #1a1a2e;
+      font-family: 'Segoe UI', sans-serif;
+      color: #fff;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 2rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+
+    svg.dice-svg {
+      width: 200px;
+      height: 200px;
+      filter: drop-shadow(0 8px 24px rgba(255,255,255,0.25));
+      transition: transform 0.05s;
+    }
+
+    svg.dice-svg.rolling {
+      animation: spinRoll 0.65s cubic-bezier(.36,.07,.19,.97) forwards;
+    }
+
+    @keyframes spinRoll {
+      0%   { transform: rotate(0deg)   scale(1); }
+      20%  { transform: rotate(-15deg) scale(0.9); }
+      50%  { transform: rotate(20deg)  scale(1.1); }
+      80%  { transform: rotate(-8deg)  scale(0.95); }
+      100% { transform: rotate(0deg)   scale(1); }
+    }
+
+    .result-box {
+      font-size: 5rem;
+      font-weight: 700;
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(4px);
+      margin-bottom: 2.5rem;
+      transition: all 0.3s ease;
+      color: #fff;
+      letter-spacing: -2px;
+    }
+
+    .result-box.highlight {
+      border-color: #fff;
+      background: rgba(255,255,255,0.12);
+      box-shadow: 0 0 32px rgba(255,255,255,0.2);
+    }
+
+    button {
+      padding: 14px 42px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: #fff;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 20px rgba(255,255,255,0.25);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(255,255,255,0.35);
+    }
+
+    button:active { transform: translateY(0); }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .history {
+      margin-top: 2rem;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 320px;
+    }
+
+    .history-item {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1.5px solid rgba(255,255,255,0.25);
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+    }
+
+    .history-label {
+      width: 100%;
+      text-align: center;
+      font-size: 0.75rem;
+      opacity: 0.5;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Dado D4</h1>
+
+  <svg class="dice-svg" id="diceSvg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="100" cy="185" rx="55" ry="8" fill="rgba(0,0,0,0.3)" />
+    <polygon points="100,18 18,162 100,140" fill="#e0e0e0" stroke="#bbb" stroke-width="2" stroke-linejoin="round"/>
+    <polygon points="100,18 182,162 100,140" fill="#c8c8c8" stroke="#bbb" stroke-width="2" stroke-linejoin="round"/>
+    <polygon points="18,162 182,162 100,140" fill="#f5f5f5" stroke="#bbb" stroke-width="2" stroke-linejoin="round"/>
+    <line x1="100" y1="18" x2="18"  y2="162" stroke="#fff" stroke-width="1.5" opacity="0.6"/>
+    <line x1="100" y1="18" x2="182" y2="162" stroke="#fff" stroke-width="1.5" opacity="0.6"/>
+    <line x1="18"  y1="162" x2="182" y2="162" stroke="#fff" stroke-width="1.5" opacity="0.6"/>
+    <line x1="100" y1="140" x2="18"  y2="162" stroke="#ddd" stroke-width="1" opacity="0.5"/>
+    <line x1="100" y1="140" x2="182" y2="162" stroke="#ddd" stroke-width="1" opacity="0.5"/>
+  </svg>
+
+  <div class="result-box" id="result">?</div>
+
+  <button id="rollBtn" onclick="rollDice()">Rolar Dado</button>
+
+  <div class="history">
+    <div class="history-label">Histórico</div>
+    <div id="historyItems" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;"></div>
+  </div>
+
+  <script>
+    const history = [];
+
+    function rollDice() {
+      const btn = document.getElementById('rollBtn');
+      const result = document.getElementById('result');
+      const svg = document.getElementById('diceSvg');
+
+      btn.disabled = true;
+      result.classList.remove('highlight');
+      svg.classList.add('rolling');
+
+      let ticks = 0;
+      const interval = setInterval(() => {
+        result.textContent = Math.ceil(Math.random() * 4);
+        ticks++;
+        if (ticks >= 8) clearInterval(interval);
+      }, 60);
+
+      setTimeout(() => {
+        svg.classList.remove('rolling');
+        const final = Math.ceil(Math.random() * 4);
+        result.textContent = final;
+        result.classList.add('highlight');
+        btn.disabled = false;
+        addToHistory(final);
+      }, 650);
+    }
+
+    function addToHistory(value) {
+      history.unshift(value);
+      if (history.length > 10) history.pop();
+      const container = document.getElementById('historyItems');
+      container.innerHTML = history.map(v =>
+        `<div class="history-item">${v}</div>`
+      ).join('');
+    }
+  </script>
+
+</body>
+</html>
